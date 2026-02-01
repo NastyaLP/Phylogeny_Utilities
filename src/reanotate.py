@@ -1,5 +1,5 @@
-import sys, os, shutil
-from nexus_to_nexusfigtree import SeqidAnot, parse_figtree_config
+import shutil
+from src.nexus_to_nexusfigtree import SeqidAnot, parse_figtree_config
 
 
 def parse_nexus_taxlabels(treefile, seqidanot, attrlines):
