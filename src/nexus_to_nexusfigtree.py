@@ -1,9 +1,11 @@
 import os, sys
+import logging
+
 
 
 class SeqidAnot:
 
-    def __init__(self, anotfile):
+    def __init__(self, anotfile, colordict, column):
 
         self.func = None
         self.seqid2anot = dict()
@@ -12,7 +14,7 @@ class SeqidAnot:
         self.seqid2subindex = dict()
         self.id902all = dict()
         self.enzbool = True
-        self.parse_anot(anotfile)
+        self.parse_anot(anotfile, colordict, column)
 
         self.merge = False
 
@@ -72,7 +74,7 @@ class SeqidAnot:
                         curid += 1
                         self.seqid2subindex[newseqid] = curid
                     seqid = f"{newseqid}.{curid}"
-                print(f"Seqid '{seqid}' is not in anotfile will be colored in black")
+                logging.warning(f"Seqid '{seqid}' is not in anotfile will be colored in black")
                 lineadd = self.construct_treeline("#d3d3d3", {})
                 return f"'{seqid}'", lineadd
         seqid = self.construct_seqid(seqid, anotdict[0])
@@ -141,7 +143,7 @@ class SeqidAnot:
         return f"'{seqid}'", "'"
 
     # for color anot to work colormap column should be present, enzyme column for legend and shapes is optional
-    def parse_anot(self, anotfile):
+    def parse_anot(self, anotfile, colordict, column):
         id90bool = True
         if not anotfile:
 
@@ -149,9 +151,11 @@ class SeqidAnot:
             return False
         with open(anotfile, "r") as inanot:
             head = next(inanot).strip("\n").split("\t")
-            # more anotations for the branch tips can be added
-            icolor = head.index("Colormap")
+
             iseqid = head.index("Seqid")
+
+            head.pop(iseqid)
+
             try:
                 id90 = head.index("Id90")
             except ValueError:
@@ -170,26 +174,39 @@ class SeqidAnot:
                 def lineextract(curline):
                     return {}
 
-            head.pop(iseqid)
+
+            try:
+                icolumn = head.index(column)
+            except ValueError:
+                try:
+                    icolumn = head.index(column.lower())
+                except ValueError:
+                    logging.error(f"The column {column} is absent. Either provide correct name of the column with"
+                                  f"--color_by_column or have default column 'Gtdb_domain' in your annotations")
+                    exit()
+
             anotlist = [el for el in head]
 
             for line in inanot:
+
                 line = line.strip("\n").split("\t")
 
                 seqid = line[iseqid]
-                color = line[icolor]
+                line.pop(iseqid)
+
+                color = colordict.get(line[icolumn])
+
                 enzyme = lineextract(line)
                 if id90bool:
                     if line[id90]:
-                        self.id902all[line[id90]] = self.id902all.get(line[id90], []) + [line[iseqid]]
-
-                line.pop(iseqid)
+                        self.id902all[line[id90]] = self.id902all.get(line[id90], []) + [seqid]
 
                 anotline = {el: line[iel] for iel, el in enumerate(anotlist)}
 
                 self.seqid2anot[seqid] = [anotline, color, enzyme]
 
         self.func = self.get_anot_func
+
 
 # for color anot to work colormap column should be present
 #simple nexus or newick as an input
@@ -201,7 +218,7 @@ def parse_nexus_newick(infile, seqidanot, splitbool):
         try:
             firstline = next(inf)
         except:
-            print(infile)
+            logging.error(f"{infile} is not newick/nexus format")
             exit(1)
 
         if firstline.startswith("("):
@@ -486,18 +503,5 @@ def single_brunch_rooting(newtreeline):
 
     return rootedtreeline
 
-def main():
-    #the input for now is simple nexus file
 
-    infile = sys.argv[1]
-    anotfile = sys.argv[2]
-    seqidanot = SeqidAnot(anotfile)
-    taxlines, attrlines = parse_figtree_config("nexusfigtree_set.txt")
-    outre, lines = parse_nexus_newick(infile, seqidanot)
-    outfile = open(os.path.splitext(infile)[0] + "_auto.figtree", 'w')
-    write_nexus_figtree(outre, lines, taxlines, attrlines, outfile)
-
-
-if __name__ == '__main__':
-    main()
 

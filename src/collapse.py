@@ -1,29 +1,41 @@
 import sys, os
-from nexus_to_nexusfigtree import SeqidAnot, parse_figtree_config, get_round
+from src.nexus_to_nexusfigtree import SeqidAnot, parse_figtree_config, get_round
+
+# 1 do the non-colormap for option with annotation file there are colors already
+# 2 do the fix for multiple cartoon
+
 
 curtaxonomy = None
-def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy):
+
+def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotbool):
 
     labelfile = open(f"{basename}_{itree}_labels.txt", "w")
 
     seqids = []
     labelfilelist = []
+    seqids2colors = dict()
     newtreeline = ''
-    seqidbool = False
-    closedbool = False
-    subindexbool = False
+
     curseqid = ""
     lastseqid = ""
+    cartoonbool = ""
 
     seqidanot.reset_merge()
     countroot = 0
     seqidcount = 0
-    checkboot = False
 
-    cartoonbool = ""
+
+
+    checkboot = False
+    seqidbool = False
+    closedbool = False
+    subindexbool = False
+    colorbool = False
+
     collapseseqids = []
     listofcollapsed = []
     allcolapsed = []
+
     curly_open = "{"
     curly_close = "}"
     prevchar = ""
@@ -77,16 +89,20 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy):
                 newtreeline += f"{char}"
             continue
 
-        elif char == "&" and lastseqid:
-            ntaxa2count, gtaxa2count, color, nodelabel, subindexbool = (
-                count_labels([lastseqid], seqidanot, subindexbool, speciesanot))
-            if nodelabel:
-                newtreeline += f"&nodelabel={nodelabel},"
-            else:
-                newtreeline += f"&nodelabel=None,"
+        elif char == "]" and lastseqid:
 
+            ntaxa2count, gtaxa2count, color, nodelabel, subindexbool = (
+                count_labels([lastseqid], seqidanot, subindexbool, speciesanot, seqids2colors))
+
+            if nodelabel:
+                newtreeline += f",nodelabel={nodelabel}]"
+            else:
+                newtreeline += f",nodelabel=None]"
 
             continue
+
+        elif char == "#":
+            colorbool = True
 
         elif char == "=":
             if newtreeline[-7:] == "cartoon":
@@ -120,7 +136,7 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy):
                     labelfilelist = labelfilelist[:-i]
 
                 ntaxa2count, gtaxa2count, color, nodelabel, subindexbool = count_labels(collapseseqids, seqidanot,
-                                                                                        subindexbool, speciesanot)
+                                                                                        subindexbool, speciesanot, seqids2colors)
                 listofcollapsed.append(collapseseqids)
 
                 newtreeline += f'{char}, !collapse={curly_open}"collapsed", {value}{curly_close},!color={color}, node={nodelabel}'
@@ -144,6 +160,13 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy):
         elif char == "]" or char == ",":
             if char == "]":
                 closedbool = True
+
+            if colorbool and seqidanotbool:
+                colorbool = False
+                color = newtreeline[-7:]
+
+                seqids2colors[lastseqid] = color
+
             if checkboot:
 
                 checkboot = False
@@ -218,7 +241,7 @@ def go_back_newtreeline(treeline, nodelabel, collseqid):
     return newtreeline[::-1]
 
 
-def count_labels(seqids, seqid2anot, subindexbool, speciesanot):
+def count_labels(seqids, seqid2anot, subindexbool, speciesanot, seqids2colors):
 
     allseqids = []
     speciesset = set()
@@ -240,6 +263,7 @@ def count_labels(seqids, seqid2anot, subindexbool, speciesanot):
                 else:
                     allseqids.append(seqid)
         if ids:
+
             idbool = True
             allseqids.extend(ids)
 
@@ -258,6 +282,13 @@ def count_labels(seqids, seqid2anot, subindexbool, speciesanot):
         prevlen = len(speciesset)
         species = anot[0][speciesanot]
 
+        if seqids2colors:
+
+            anot[0]["Colormap"] = seqids2colors[seqid]
+
+        else:
+            anot[0]["Colormap"] = anot[1]
+
         if species.startswith("Unclassified") or species.startswith("-"):
             speciesids.append(seqid)
             anots.append(anot[0])
@@ -272,8 +303,7 @@ def count_labels(seqids, seqid2anot, subindexbool, speciesanot):
             anots.append(anot[0])
 
     if len(speciesids) == 0:
-        print("0000")
-        print(allseqids)
+
         return False, False, False, False, False
 
     return recursive_label_count(speciesids, anots) + (subindexbool,)
@@ -354,6 +384,7 @@ def get_taxa_labels(el, anots, speciesids, **kwargs):
     totalcount = 0
     taxa2anots = dict()
 
+
     iupper = kwargs.get("upper", el)
     if not iupper:
         iupper = el
@@ -418,7 +449,10 @@ def get_taxa_labels(el, anots, speciesids, **kwargs):
 
 def  parse_nexus_to_collapse(treefile, seqidanot, attrlines, reanotbool, taxonomy):
 
-
+    if not seqidanot.seqid2anot:
+        seqidanotbool = True
+    else:
+        seqidanotbool = False
 
     with open(treefile) as tree:
 
@@ -453,9 +487,20 @@ def  parse_nexus_to_collapse(treefile, seqidanot, attrlines, reanotbool, taxonom
 
             elif start and not reanotbool:
                 outfile.write(line)
+                if seqidanotbool:
+
+                    seqid, anot = line.split("[")
+                    seqid = seqid.replace("'", "")
+                    anotdict = dict()
+                    for el in anot[1:-2].split(","):
+                        ellist = el.split("=")
+                        anotdict[ellist[0]] = ellist[1].replace('"', '')
+                    seqidanot.seqid2anot[seqid] = [anotdict, None, None]
+
             elif line.strip().startswith("tree tree"):
 
-                newtreeline = treeline_collapse(line, seqidanot, itree, os.path.splitext(treefile)[0], taxonomy)
+                newtreeline = treeline_collapse(line, seqidanot, itree, os.path.splitext(treefile)[0], taxonomy,
+                                                seqidanotbool)
                 outfile.write(newtreeline[1])
             elif line.strip().startswith("taxlabels"):
                 start = True
@@ -464,7 +509,6 @@ def  parse_nexus_to_collapse(treefile, seqidanot, attrlines, reanotbool, taxonom
                 break
             else:
                 outfile.write(line)
-
 
         for line in attrlines:
             outfile.write(line)
