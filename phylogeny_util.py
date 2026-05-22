@@ -2,7 +2,7 @@
 import logging
 logging.basicConfig(level=logging.WARNING)
 ################################################################################################
-""" convert_annotate_to_pdf.py: starts with iqtree output, converts to basic nexus
+""" phylogeny_util.py: starts with iqtree output, converts to basic nexus
     annotates and colors the tips, annotates the phylogeny,converts to pdf """
 ###############################################################################################
 
@@ -237,7 +237,7 @@ def strip_hex_quotes(colordict):
 def main():
 
     parser = argparse.ArgumentParser(
-        prog='convert_annotate_to_pdf_domain.py',
+        prog='Phylogeny_Utilities',
         description='starts with iqtree output, converts to basic nexus,anotates and colors the tips, converts to pdf,'
                     'basic usage:\n'
                     'python phylogeny_util.py <input_dir> <treefile_extension> -a <annotation_file>')

@@ -33,10 +33,10 @@ unzip FigTree.v1.4.4.zip
 cp FigTree\ v1.4.4/lib/figtree.jar Phylogeny_Utilities/
 ```
 
-4. Switch to the  Phylogeny_Utilities and run convert_anotate_to_pdf_domain.py to see all available options:
+4. Switch to the  Phylogeny_Utilities and run phylogeny_util.py to see all available options:
 
 ```bash
-python3 convert_anotate_to_pdf_domain.py --help
+python3 phylogeny_util.py --help
 ```
 ---
 
@@ -48,7 +48,7 @@ python3 convert_anotate_to_pdf_domain.py --help
 1. **Annotate, color, and round bootstrap values for plain Newick tree files**
 
 ```bash
-python3 convert_anotate_to_pdf_domain.py "test" "rooted" --annotation test/anotfile.tsv --convert
+python3 phylogeny_util.py "test" "rooted" --annotation test/anotfile.tsv --convert
 ```
 
 where:
@@ -66,7 +66,7 @@ where:
 Default:
 
 ```bash
-python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --convert
+python3 phylogeny_util.py "test" "cartoon.figtree" --collapse --convert
 ```
 where:
 - "test" for the directory with trees of any depth 
@@ -79,7 +79,7 @@ You need specific columns with taxonomy information in your annotation file to r
     - Ncbi_phylum, Ncbi_class, Ncbi_order, Ncbi_species
 
 ```bash
-python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --taxonomy Ncbi --convert
+python3 phylogeny_util.py "test" "cartoon.figtree" --collapse --taxonomy Ncbi --convert
 ```
 
 - When using only GTDB taxonomy annotation file must have four columns named:  
@@ -87,7 +87,7 @@ python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --t
 
 
 ```bash
-python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --taxonomy Gtdb --convert
+python3 phylogeny_util.py "test" "cartoon.figtree" --collapse --taxonomy Gtdb --convert
 ```
 
 By default without "--taxonomy" option specified it will use both taxonomies. That means both the Ncbi and Gtdb columns mentioned above should be present in the annotation file.
@@ -101,5 +101,5 @@ Having 'Id90' allows to count reduced sequences belonging to the clades of their
 
 
 ```bash
-python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --annotation test/anotfile.tsv --convert
+python3 phylogeny_util.py "test" "cartoon.figtree" --collapse --annotation test/anotfile.tsv --convert
 ```
