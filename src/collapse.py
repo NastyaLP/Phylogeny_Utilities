@@ -562,7 +562,6 @@ def  parse_nexus_to_collapse(treefile, seqidanot, attrlines, reanotbool, taxonom
 
 def reanotate_nexus(seqidanot, treefile, reanotate, taxonomy):
 
-    sys.stdout.write(f"Start collapsing {treefile}\n")
     taxlines, attrlines = parse_figtree_config("nexusfigtree_set_to_collapse.txt")
     return parse_nexus_to_collapse(treefile, seqidanot, attrlines, reanotate, taxonomy)
 

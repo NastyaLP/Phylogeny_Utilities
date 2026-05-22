@@ -1,35 +1,105 @@
-**Anotate phylogenies**
+# Anotate phylogenies
 
+## Installation
 
-To see options:
+Python 3.8+  
+Required Python packages:  
+- biopython
+- PyPDF2
 
+1. Install dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+or manually:
+```bash
+pip install biopython PyPDF2
+```
+2. Clone a repository:  
+
+```bash
+git clone https://github.com/NastyaLP/Phylogeny_Utilities  
+```
+3. Download and copy figtree.jar to Phylo
+
+- download und unzip FigTree.v1.4.4.zip from GitHub with wget or manually  
+```bash
+wget https://github.com/rambaut/figtree/releases/download/v1.4.4/FigTree.v1.4.4.zip
+unzip FigTree.v1.4.4.zip
+```
+- copy figtree.jar to Phylogeny_Utilities
+```bash
+cp FigTree\ v1.4.4/lib/figtree.jar Phylogeny_Utilities/
+```
+
+4. Switch to the  Phylogeny_Utilities and run convert_anotate_to_pdf_domain.py to see all available options:
+
+```bash
 python3 convert_anotate_to_pdf_domain.py --help
+```
+---
+
+## Usage Examples 
+
+**Examples for reproducing commands provided within directory test**
 
 
+1. **Annotate, color, and round bootstrap values for plain Newick tree files**
 
-**Usage Examples (examples for reproducing commands provided within test_dir)**
-
-
-1. **To anotate and color and round bootstraps for plain newick treefile:**
-
-python3 convert_anotate_to_pdf_domain.py test_dir rooted --annotation test_dir/anotfile.tsv --convert
+```bash
+python3 convert_anotate_to_pdf_domain.py "test" "rooted" --annotation test/anotfile.tsv --convert
+```
 
 where:
 
-- "test_dir" for the directory with trees of any depth 
+- "test" for the directory with trees of any depth 
 - "rooted" for the file extensions to look  
+- "--convert" for converting nexus to pdf image
 
 ! In anotfile required columns are Seqid (for sequence id) and Colormap (for colors you want to map according to selected anotation feature)
 
+---
 
-2. **To collapse cartoon**
+2. **Collapse cartooned clades and label them with taxonomic counts per clade**
 
-python3 convert_anotate_to_pdf_domain.py test_dir cartoon.figtree --collapse --annotation test_dir/anotfile.tsv --reanotate --convert
+Default:
 
+```bash
+python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --convert
+```
 where:
+- "test" for the directory with trees of any depth 
+- "cartoon.figtree" Extensions of your cartooned phylogenies that you want to process for clade labels and colors
+- "--convert" for converting nexus to pdf image
 
-"cartoon.figtree" Extensions of your cartooned phylogenies that you want to process for clade labels and colors
-"reanotate" Reanotate tree (in case there were changes in annotation file)
+You need specific columns with taxonomy information in your annotation file to run collapse option on your cartooned phylogenies:  
 
-You need additional columns for that option in your anotation file:
-    I will write if the need exists
+- When using only Ncbi taxonomy annotation file must have four columns named:  
+    - Ncbi_phylum, Ncbi_class, Ncbi_order, Ncbi_species
+
+```bash
+python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --taxonomy Ncbi --convert
+```
+
+- When using only GTDB taxonomy annotation file must have four columns named:  
+    - Gtdb_phylum, Gtdb_class, Gtdb_order, Gtdb_species
+
+
+```bash
+python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --taxonomy Gtdb --convert
+```
+
+By default without "--taxonomy" option specified it will use both taxonomies. That means both the Ncbi and Gtdb columns mentioned above should be present in the annotation file.
+
+---
+
+3. **Advanced usage**
+
+When sequences reduction was performed before phylogenetic reconstruction, then use the annotation file with representative id column 'Id90''(cluster representative)    
+Having 'Id90' allows to count reduced sequences belonging to the clades of their representatives to fully represent taxonomic information.
+
+
+```bash
+python3 convert_anotate_to_pdf_domain.py "test" "cartoon.figtree" --collapse --annotation test/anotfile.tsv --convert
+```

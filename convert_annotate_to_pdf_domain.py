@@ -18,7 +18,7 @@ from src.reanotate import parse_nexus_taxlabels
 
 
 __author__ = "Anastasiia Padalko"
-__license__ = "GPL"
+__license__ = "Apache-2.0 license"
 __version__ = "1.0"
 
 
@@ -45,7 +45,8 @@ def figtree_pdf_convert(treepath, ntips):
     pdfpath = os.path.splitext(treepath)[0] + ".pdf"
     figpath = f"{os.path.dirname(os.path.abspath(__file__))}/figtree.jar"
 
-    subprocess.check_output(["java", "-jar", figpath, "-graphic", "PDF", "-width",  width, "-height", height, treepath, pdfpath])
+    subprocess.check_output(["java", "-jar", figpath, "-graphic", "PDF", "-width",  width, "-height", height, treepath, pdfpath],
+                            stderr=subprocess.STDOUT)
 
     return pdfpath
 
@@ -56,27 +57,32 @@ def figtree_convert_pdf_static_width(treepath):
 
     pdfpath = os.path.splitext(treepath)[0] + ".pdf"
     figpath = f"{os.path.dirname(os.path.abspath(__file__))}/figtree.jar"
-
-    subprocess.check_output(
-        ["java", "-jar", figpath, "-graphic", "PDF", "-width", width, "-height", height, treepath, pdfpath])
-
+    
+    try:
+        
+        subprocess.check_output(
+        ["java", "-jar", figpath, "-graphic", "PDF", "-width", width, "-height", height, treepath, pdfpath],
+            stderr=subprocess.STDOUT,
+            text=True)
+        
+    except subprocess.CalledProcessError as e:
+        print(e.output)
     return pdfpath
 
-def parse_tree_dir(indir,  queryext, seqidanot, convert, outdir, splitbool, merge_annotations, reanotate, collapse,
+def parse_tree_dir(indir, queryext, seqidanot, convert, outdir, splitbool, merge_annotations, reanotate, collapse,
                    taxonomy_to_collapse):
 
-    if not outdir:
-        logging.warning(f"Output directory is not provided. Processed phylogenies can be found in the "
-                     f"can be found in the same directory with the input ones with the disered extension '{queryext}'")
+    
 
     taxlines, attrlines = parse_figtree_config("nexusfigtree_set.txt")
-
-
+    
+    i = 0
+    
     for root, dirs, files in os.walk(indir):
         for file in files:
 
             if file.endswith(queryext):
-
+                i += 1
                 seqidanot.seqid2subindex = dict()
 
                 if collapse:
@@ -92,6 +98,8 @@ def parse_tree_dir(indir,  queryext, seqidanot, convert, outdir, splitbool, merg
                 else:
                     parse_tree(os.path.join(root, file), seqidanot, outdir, taxlines,
                                                 attrlines, splitbool, convert,  merge_annotations)
+
+    sys.stdout.write(f"{i} treefile(s) with an extension '{queryext}' processed\n")
 
 
 def get_model(filepath):
@@ -232,7 +240,7 @@ def main():
         prog='convert_annotate_to_pdf_domain.py',
         description='starts with iqtree output, converts to basic nexus,anotates and colors the tips, converts to pdf,'
                     'basic usage:\n'
-                    'python convert_anotate_to_pdf.py -a <annotation_file> --merge_pdf <input_dir> <treefile_extension>')
+                    'python phylogeny_util.py <input_dir> <treefile_extension> -a <annotation_file>')
 
     parser.add_argument('indir', help="input directory of any depth with phylogeny files", type=str)
     parser.add_argument('extension', help="file extension of the phylogeny files you want to process")
@@ -315,27 +323,32 @@ def main():
 
     seqidanot = SeqidAnot(args.annotation, colordict, column)
     seqidanot.set_merge(args.merge_pdf, args.pdf_annotations)
+    if args.collapse:
+        logging.warning("Output file(s) for --collapse option is saved in the directory with input file(s)")
 
     parse_tree_dir(args.indir, args.extension, seqidanot, args.convert, args.outdir,
                    args.split_trees, args.merge_annotations, args.reanotate, args.collapse, args.taxonomy_to_collapse)
 
     if args.merge_pdf:
-
+        
         if args.outdir:
             outpath = os.path.join(args.outdir, "joined_phylogeny_domain.pdf")
-        else:
-
+            
+        elif not args.collapse:
             outdir = os.path.dirname(args.indir)
             logging.warning(f"Output directory is not provided. All phylogenies pdf file 'joined_phylogeny_domain.pdf' "
                             f"can be found in {os.path.realpath(outdir)}")
 
             outpath = os.path.join(outdir, "joined_phylogeny_domain.pdf")
-
+    
+        
+    
         if args.merge_annotations:
             pdfmerge(tree2anot2count, outpath, True, pdfpathlist)
         else:
             pdfmerge(tree2anot2count, outpath, False, pdfpathlist)
 
+    sys.stdout.write("The processing has finished. Exiting now\n")
 
 if __name__ == '__main__':
     main()

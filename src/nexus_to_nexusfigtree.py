@@ -288,7 +288,6 @@ def newick_parser_split(firstline, inf, seqidanot, infile):
 
 def nexus_parser(firstline, inf, seqidanot, infile):
     lines = []
-    print(firstline)
     for line in inf:
 
         if line.startswith("tree"):
