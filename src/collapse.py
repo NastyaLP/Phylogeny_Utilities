@@ -7,8 +7,21 @@ from src.nexus_to_nexusfigtree import SeqidAnot, parse_figtree_config, get_round
 
 curtaxonomy = None
 
-def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotbool):
 
+def treeline_collapse(treeline: str, seqidanot: SeqidAnot, itree, basename, taxonomy: str, seqidanotbool: bool):
+    """
+    Takes treeline from nexus format, collapses it and counts number of sequences belonging to the taxa
+    Can use NCBI or GTDB taxonomy. If annotation file is provided and has 'Id90' 
+    also adds counts for the sequences that were reduced and are represented by a single tip
+    
+    :param treeline: 
+    :param seqidanot: 
+    :param itree: 
+    :param basename: 
+    :param taxonomy: 
+    :param seqidanotbool: 
+    :return: 
+    """
     labelfile = open(f"{basename}_{itree}_labels.txt", "w")
 
     seqids = []
@@ -25,13 +38,12 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotb
     seqidcount = 0
 
 
-
+    cartoonbool2 = False
     checkboot = False
     seqidbool = False
     closedbool = False
     subindexbool = False
     colorbool = False
-
     collapseseqids = []
     listofcollapsed = []
     allcolapsed = []
@@ -53,20 +65,15 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotb
     for char in treeline:
 
         if char == "'":
+            continue
+
+        if char == "(" or (char == "," and closedbool):
 
             if not seqidbool:
+                    
                 seqidbool = True
-                newtreeline += char
-                continue
-            else:
-                seqidbool = False
-                seqidcount += 1
-
-                seqids.append(curseqid)
-                lastseqid = curseqid
-                collapseseqids.append(curseqid)
-                allcolapsed.append(curseqid)
-                curseqid = ""
+            
+            
         elif char.isalpha() and not seqidbool and closedbool and not newtreeline[-1].isdigit():
 
                 seqidbool = True
@@ -77,20 +84,25 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotb
         elif char == "[":
             closedbool = False
             if seqidbool:
+
+                seqidcount += 1
                 seqidbool = False
                 seqids.append(curseqid)
                 lastseqid = curseqid
-
                 collapseseqids.append(curseqid)
                 allcolapsed.append(curseqid)
+                newtreeline += f"'{curseqid}'{char}"       
                 curseqid = ""
-                newtreeline += f"'{char}"
             else:
                 newtreeline += f"{char}"
             continue
-
+        elif char == "]" and cartoonbool2:
+            closedbool = True
+            newtreeline += char
+            cartoonbool2 = False
+            
         elif char == "]" and lastseqid:
-
+            closedbool = True
             ntaxa2count, gtaxa2count, color, nodelabel, subindexbool = (
                 count_labels([lastseqid], seqidanot, subindexbool, speciesanot, seqids2colors))
 
@@ -116,6 +128,7 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotb
                 value = cartoonbool.split(",")[1].strip("}")
                 countids = int(cartoonbool.split(",")[0].strip("={"))
                 cartoonbool = ""
+                cartoonbool2 = True
                 i = 0
                 printbool = False
 
@@ -167,21 +180,21 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotb
 
                 seqids2colors[lastseqid] = color
 
-            if checkboot:
+            if char == "," and checkboot:
 
                 checkboot = False
 
                 newtreeline = newtreeline[:-2] + str(get_round(newtreeline[-2:].strip("="))[0])
 
             newtreeline += char
-            #newtreeline += "'"
             openbool = True
             continue
 
-        if seqidbool:
+        if seqidbool and char != "(" and char != ",":
             curseqid += char
 
-        newtreeline += char
+        else:
+            newtreeline += char
         if char == ";":
             newtreeline += "\n"
             break
@@ -189,11 +202,20 @@ def treeline_collapse(treeline, seqidanot, itree, basename, taxonomy, seqidanotb
         labelfile.write(line)
     labelfile.flush()
     labelfile.close()
-    #print(newtreeline)
+
     return seqids,  newtreeline
 
-def go_back_newtreeline(treeline, nodelabel, collseqid):
-
+def go_back_newtreeline(treeline: str, nodelabel, collseqid: list):
+    """
+    After identification of the best taxonomic label for the collapsed/cartooned clade
+    backpropagates the label to all the nodes in the clade to visualise the label next
+     to collapsed clade
+    
+    :param treeline: 
+    :param nodelabel: 
+    :param collseqid: 
+    :return: 
+    """
     seqidbool = False
     seqidcount = 0
     newtreeline = ""
@@ -201,6 +223,7 @@ def go_back_newtreeline(treeline, nodelabel, collseqid):
     addlabel = False
     addbool = True
     onlyadd = False
+    treeline += "]"
 
     for char in treeline[::-1]:
         if onlyadd:
@@ -225,27 +248,42 @@ def go_back_newtreeline(treeline, nodelabel, collseqid):
 
                 curseqid = ""
         if char == "&":
+           
+            subline = newtreeline[newtreeline.rfind("]"):][::-1]
+            newtreeline = newtreeline[:newtreeline.rfind("]")][::-1]
 
-            newtreeline = newtreeline[:newtreeline.rfind(",")][::-1]
+            first, last = subline.rsplit(",", 1)
+            
+            if last.startswith("nodelabel"):
+    
+                last = f"nodelabel={nodelabel}]"
+        
+            else:
+                
+                last = last[:-1] + f",nodelabel={nodelabel}]"
 
-            add = f"&nodelabel={nodelabel},"
+            subline = ",".join([first, last])
 
-            newtreeline = add + newtreeline
+            #add = f"&nodelabel={nodelabel},"
+            newtreeline = char + subline + newtreeline
+
             newtreeline = newtreeline[::-1]
+            
             continue
 
         if seqidbool:
             curseqid += char
         newtreeline += char
 
-    return newtreeline[::-1]
+    return newtreeline[::-1][:-1]
 
 
-def count_labels(seqids, seqid2anot, subindexbool, speciesanot, seqids2colors):
-
+def count_labels(seqids: list, seqid2anot: SeqidAnot, subindexbool, speciesanot, seqids2colors):
+    
     allseqids = []
     speciesset = set()
     idbool = False
+
     for seqid in seqids:
         if subindexbool:
             seqid = ".".join(seqid.split(".")[:-1])
@@ -319,7 +357,14 @@ def format_taxa_counts(thedict):
 
 
 def recursive_label_count(speciesids, anots):
-
+    """
+    Loops over taxonomic ranks until it finds taxonomic label(s) representing the majority
+    of tips in the cartoon to collapse
+    
+    :param speciesids: 
+    :param anots: 
+    :return: 
+    """
     ncbilist = ["Ncbi_order", "Ncbi_class", "Ncbi_phylum"]
     gtdblist = ["Gtdb_order", "Gtdb_class", "Gtdb_phylum"]
     nfirstcolor, gfirstcolor = None, None
