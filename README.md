@@ -21,7 +21,7 @@ pip install biopython PyPDF2
 ```bash
 git clone https://github.com/NastyaLP/Phylogeny_Utilities  
 ```
-3. Download and copy figtree.jar to Phylo
+3. Download and copy figtree.jar to Phylogeny_Utilities
 
 - download und unzip FigTree.v1.4.4.zip from GitHub with wget or manually  
 ```bash
