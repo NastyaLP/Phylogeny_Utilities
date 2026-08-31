@@ -18,7 +18,7 @@ def get_round(label):
     else:
         return 90, ufb_color[90]
 
-def get_id_nexus(treeline, seqidanot, infile,anotbool):
+def get_id_nexus(treeline: str, seqidanot: , infile,anotbool):
 
     seqids = []
     newtreeline = ''

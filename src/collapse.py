@@ -14,7 +14,7 @@ def treeline_collapse(treeline: str, seqidanot: SeqidAnot, itree, basename, taxo
     Can use NCBI or GTDB taxonomy. If annotation file is provided and has 'Id90' 
     also adds counts for the sequences that were reduced and are represented by a single tip
     
-    :param treeline: 
+    :param treeline:
     :param seqidanot: 
     :param itree: 
     :param basename: 
@@ -205,7 +205,7 @@ def treeline_collapse(treeline: str, seqidanot: SeqidAnot, itree, basename, taxo
 
     return seqids,  newtreeline
 
-def go_back_newtreeline(treeline: str, nodelabel, collseqid: list):
+def go_back_newtreeline(treeline: str, nodelabel: str, collseqid: list):
     """
     After identification of the best taxonomic label for the collapsed/cartooned clade
     backpropagates the label to all the nodes in the clade to visualise the label next
@@ -278,8 +278,19 @@ def go_back_newtreeline(treeline: str, nodelabel, collseqid: list):
     return newtreeline[::-1][:-1]
 
 
-def count_labels(seqids: list, seqid2anot: SeqidAnot, subindexbool, speciesanot, seqids2colors):
-    
+def count_labels(seqids: list, seqid2anot: SeqidAnot, subindexbool: bool, speciesanot: str, seqids2colors: dict):
+    """
+    Counts number of tips in the clade by species; only one sequence per species is considered
+    If sequence reduction was performed and the representative id column is provided than it also counts,
+    all sequences represented by the tip of the selected sequence
+
+    :param seqids:
+    :param seqid2anot:
+    :param subindexbool:
+    :param speciesanot:
+    :param seqids2colors:
+    :return:
+    """
     allseqids = []
     speciesset = set()
     idbool = False
@@ -370,6 +381,7 @@ def recursive_label_count(speciesids, anots):
     nfirstcolor, gfirstcolor = None, None
     gtaxa2count = {}
     ntaxa2count = {}
+
     if not curtaxonomy or curtaxonomy == "Ncbi":
         for nind, el in enumerate(ncbilist):
             nbool, ntaxa2count, nfirstcolor, ntaxa, ncount, mix = get_taxa_labels(el, anots, speciesids)
@@ -403,14 +415,15 @@ def recursive_label_count(speciesids, anots):
         label = f"ncbi_{ntaxa2count}"
 
         return ntaxa2count, {}, firstcolor, label
-    if ind < nind and gtaxa and  not gtaxa.startswith("Unclass"):
+
+    if ind < nind and gtaxa and not gtaxa.startswith("Unclass"):
         label = f"gtdb_{gtaxa2count}"
         return ntaxa2count, gtaxa2count, gfirstcolor, label
     if gtaxa and gtaxa.startswith("Unclass"):
         label = f"ncbi_{ntaxa2count}"
-    elif (ncount - gcount)/len(speciesids) > 0.3:
 
-        label = f"ncbi_{ntaxa2count}"
+    #elif (ncount - gcount)/len(speciesids) > 0.3:
+    #    label = f"ncbi_{ntaxa2count}"
 
     elif gmix and not mix:
         label = f"ncbi_{ntaxa2count}"

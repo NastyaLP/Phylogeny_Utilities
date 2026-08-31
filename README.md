@@ -7,19 +7,19 @@ Required Python packages:
 - biopython
 - PyPDF2
 
-1. Install dependencies with:
+1. Clone a repository:  
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/NastyaLP/Phylogeny_Utilities  
+```
+2. Install dependencies with:
+
+```bash
+pip install -r Phylogeny_Utilities/requirements.txt
 ```
 or manually:
 ```bash
 pip install biopython PyPDF2
-```
-2. Clone a repository:  
-
-```bash
-git clone https://github.com/NastyaLP/Phylogeny_Utilities  
 ```
 3. Download and copy figtree.jar to Phylogeny_Utilities
 
